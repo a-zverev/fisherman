@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cd Experiments/Fisherman_Bot/fisherman/
-python3 watchdog.py 
+cd ~/Experiments/fisherman/
+python3 watchdog.py 2>>watchdog_errors.log
