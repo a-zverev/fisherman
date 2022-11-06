@@ -37,7 +37,7 @@ def perekrestok_finder(source_url):
         
 if __name__ == "__main__":
     
-    logging.basicConfig(filename='watchdog.log', format='%(asctime)s %(message)s', level=logging.DEBUG)
+    logging.basicConfig(filename='watchdog.log', format='%(asctime)s %(message)s', level=logging.INFO)
     
     # read data from DB
     con = sqlite3.connect(DB_ADDRESS_WATCHDOG)
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     prices['price'] = pd.to_numeric(prices['price'])
     mean_price_and_date=prices.groupby(['id']).agg({'price':lambda x: x.mean(skipna=True), 'datetime':'max'})
     stats=mean_price_and_date.merge(prices, how='left', on=['id', 'datetime'], suffixes=['_mean', '_last'])
-    stats['abs_profit'] = (stats['price_last'] - stats['price_mean']).round(2)
+    stats['abs_profit'] = (stats['price_mean'] - stats['price_last']).round(2)
     stats['relt_profit'] = (stats['abs_profit'] / stats['price_mean']).round(2)
     stats['price_mean'] = stats['price_mean'].round(2)
 #     print(stats)
