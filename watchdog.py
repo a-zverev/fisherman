@@ -10,8 +10,6 @@ from datetime import datetime
 from config import DB_ADDRESS_WATCHDOG
 
 
-
-# price request function
 def perekrestok_finder(source_url):
     """
     Parse Perekrestok page, find information about the item and return name and price
@@ -87,11 +85,13 @@ if __name__ == "__main__":
     stats=mean_price_and_date.merge(prices, how='left', on=['id', 'datetime'], suffixes=['_mean', '_last'])
     stats['abs_profit'] = (stats['price_mean'] - stats['price_last']).round(2)
     stats['relt_profit'] = (stats['abs_profit'] / stats['price_mean']).round(2)
-    stats['price_mean'] = stats['price_mean'].round(2)
-#     print(stats)
+    stats['price_mean'] = 1 - stats['price_mean'].round(2)
+    
+    logging.debug("Database write stats: open connection")
     con = sqlite3.connect(DB_ADDRESS_WATCHDOG)
     stats.to_sql('stats', con, if_exists='replace', index=False)
     con.close()
+    logging.debug("Database write stats: close connection")
     
     logging.info("The database has been updated successfully")
         
