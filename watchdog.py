@@ -84,8 +84,8 @@ if __name__ == "__main__":
     mean_price_and_date=prices.groupby(['id']).agg({'price':lambda x: x.mean(skipna=True), 'datetime':'max'})
     stats=mean_price_and_date.merge(prices, how='left', on=['id', 'datetime'], suffixes=['_mean', '_last'])
     stats['abs_profit'] = (stats['price_mean'] - stats['price_last']).round(2)
-    stats['relt_profit'] = (stats['abs_profit'] / stats['price_mean']).round(2)
-    stats['price_mean'] = 1 - stats['price_mean'].round(2)
+    stats['relt_profit'] = 1 - ((stats['abs_profit'] / stats['price_mean']).round(2))
+    stats['price_mean'] = stats['price_mean'].round(2)
     
     logging.debug("Database write stats: open connection")
     con = sqlite3.connect(DB_ADDRESS_WATCHDOG)

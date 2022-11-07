@@ -1,5 +1,6 @@
 import logging
 import telebot
+import time
 from telebot import types
 from telegram_bot_pagination import InlineKeyboardPaginator
 
@@ -22,7 +23,7 @@ def bot_polling():
             bot.stop_polling()
             return
         except Exception as e:
-            logging.error(f"Bot polling failed, restarting in {BOT_TIMEOUT} sec. Error:{e}")
+            logging.error(f"Bot polling failed, restarting in {BOT_TIMEOUT} sec. Error: {e}")
             bot.stop_polling()
             sleep(BOT_TIMEOUT)
             
@@ -54,15 +55,20 @@ def bot_actions(bot):
     def remove_item(message):
         ID = message.text.strip()
         user = message.from_user.username
-        result = operations.remove_item_from_watch(ID, user)
-        if result == "Not_in_list":
-            bot.send_message(message.chat.id, f"ID {ID} не найден в вашем списке наблюдения",
-                            reply_markup=kboard)
-        elif result == "Removed":
-            bot.send_message(message.chat.id, f"ID {ID} удален из списка наблюдения",
-                            reply_markup=kboard)
+        
+        if ID.isdigit():            
+            result = operations.remove_item_from_watch(ID, user)
+            if result == "Not_in_list":
+                bot.send_message(message.chat.id, f"ID {ID} не найден в вашем списке наблюдения",
+                                reply_markup=kboard)
+            elif result == "Removed":
+                bot.send_message(message.chat.id, f"ID {ID} удален из списка наблюдения",
+                                reply_markup=kboard)
+            else:
+                bot.send_message(message.chat.id, f"ID {ID} ворует-убивает гусей",
+                                reply_markup=kboard)
         else:
-            bot.send_message(message.chat.id, f"ID {ID} ворует-убивает гусей",
+            bot.send_message(message.chat.id, f"ID - это число. Кажется, вы пытаетесь записать что-то иное",
                             reply_markup=kboard)
     
             
@@ -141,7 +147,7 @@ def bot_actions(bot):
             
     def feedback(message):
         with open('feedback.txt', 'a') as file:
-            file.write(f"Message from user {message.from_user.username}:\n")
+            file.write(f"Message from user {message.from_user.username}:\t")
             file.write(message.text)
             file.write('\n')
             bot.send_message(message.chat.id, "Cпасибо! Мы обратим на это внимание",
@@ -209,7 +215,8 @@ def bot_actions(bot):
             get_profits(message)
             
         else:
-            ...
+            bot.send_message(message.chat.id, "Команда не распознана. Доступные опции перечислены в /start",
+                             reply_markup=kboard)
             
     @bot.callback_query_handler(func=lambda call: call.data.split('#')[0]=='items')
     def items_page_callback(call):
