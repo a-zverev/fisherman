@@ -38,9 +38,9 @@ def bot_actions(bot):
       
     def add_item(message):
         url = message.text.strip()
-        user = message.from_user.username
+        user_id = message.from_user.id
         
-        result = operations.add_item_to_database(url, user)
+        result = operations.add_item_to_database(url, user_id)
         if result == 'Already_exist':
             bot.send_message(message.chat.id, 'Этот продукт уже находится в вашем списке наблюдения',
                             reply_markup=kboard)
@@ -54,28 +54,23 @@ def bot_actions(bot):
     
     def remove_item(message):
         ID = message.text.strip()
-        user = message.from_user.username
+        user_id = message.from_user.id
         
-        if ID.isdigit():            
-            result = operations.remove_item_from_watch(ID, user)
-            if result == "Not_in_list":
-                bot.send_message(message.chat.id, f"ID {ID} не найден в вашем списке наблюдения",
-                                reply_markup=kboard)
-            elif result == "Removed":
-                bot.send_message(message.chat.id, f"ID {ID} удален из списка наблюдения",
-                                reply_markup=kboard)
-            else:
-                bot.send_message(message.chat.id, f"ID {ID} ворует-убивает гусей",
-                                reply_markup=kboard)
+        result = operations.remove_item_from_watch(ID, user_id)
+        if result == "Not_in_list":
+            bot.send_message(message.chat.id, f"ID {ID} не найден в вашем списке наблюдения",
+                            reply_markup=kboard)
+        elif result == "Removed":
+            bot.send_message(message.chat.id, f"ID {ID} удален из списка наблюдения",
+                            reply_markup=kboard)
         else:
-            bot.send_message(message.chat.id, f"ID - это число. Кажется, вы пытаетесь записать что-то иное",
+            bot.send_message(message.chat.id, f"ID {ID} ворует-убивает гусей",
                             reply_markup=kboard)
     
             
-    def get_items(message, isCallback=False, page=1):
-        user = message.from_user.username
-    #     user = 'root'
-        result = operations.get_list_of_items_on_watch(user)
+    def get_items(message, user_id, isCallback=False, page=1):
+    
+        result = operations.get_list_of_items_on_watch(user_id)
         if not result:
             answer = ["У вас нет продуктов в списке наблюдения"]
         else:    
@@ -83,13 +78,16 @@ def bot_actions(bot):
             for i in range(0, len(result), 12):
                 batch = result[i:i+12]
                 answer.append("\n".join([f"id {i['id']}: {i['name']}" for i in batch]))
-        
+    
+    
         paginator = InlineKeyboardPaginator(
             len(answer),
             current_page=page,
-            data_pattern='items#{page}'
+            data_pattern=f'{user_id}#'+'items#{page}'
         )
         if isCallback:
+            if answer[page-1] == message.text:
+                return
             bot.edit_message_text(
                 chat_id=message.chat.id,
                 text=answer[page-1],
@@ -106,10 +104,9 @@ def bot_actions(bot):
             )
     
             
-    def get_profits(message, isCallback=False, page=1):
-        user = message.from_user.username
-    #     user = 'root'
-        result = operations.get_list_of_profits_for_user(user, abs_profit_threshold=10)
+    def get_profits(message, user_id, isCallback=False, page=1):
+        
+        result = operations.get_list_of_profits_for_user(user_id, abs_profit_threshold=10)
         if not result:
             answer = ["Сегодня не ваш день - по скидонькам ничего нет :("]
         else:
@@ -118,17 +115,19 @@ def bot_actions(bot):
                 batch = result[i:i+5]
                 formatted_message = "\n".join(
                     [f"*{i['name']}*\n\
-     Сейчас: {i['price_last']}р, в среднем: {i['price_mean']}р\n\
-     Профит: {i['abs_profit']}р ({i['relt_profit']})\n" for i in batch]
+        Сейчас: {i['price_last']}р, в среднем: {i['price_mean']}р\n\
+        Профит: {i['abs_profit']}р ({i['relt_profit']})\n" for i in batch]
                 )
                 answer.append(formatted_message)
             
         paginator = InlineKeyboardPaginator(
             len(answer),
             current_page=page,
-            data_pattern='profits#{page}'
+            data_pattern=f'{user_id}#'+'profits#{page}'
         )
         if isCallback:
+            if answer[page-1] == message.text:
+                return
             bot.edit_message_text(
                 chat_id=message.chat.id,
                 text=answer[page-1],
@@ -147,7 +146,7 @@ def bot_actions(bot):
             
     def feedback(message):
         with open('feedback.txt', 'a') as file:
-            file.write(f"Message from user {message.from_user.username}:\t")
+            file.write(f"Message from user {message.from_user.username} : {message.from_user.id}:\n")
             file.write(message.text)
             file.write('\n')
             bot.send_message(message.chat.id, "Cпасибо! Мы обратим на это внимание",
@@ -155,8 +154,7 @@ def bot_actions(bot):
     
             
     def add_demo(message):
-        user = message.from_user.username
-        if operations.add_demo_for_user(user):
+        if operations.add_demo_for_user(message.from_user.id):
             bot.send_message(message.chat.id, "Демо-база подключена", reply_markup=kboard)
         else:
             bot.send_message(message.chat.id, "Ошибка подключения базы", reply_markup=kboard)
@@ -204,7 +202,7 @@ def bot_actions(bot):
             bot.register_next_step_handler(message, add_item)
             
         elif message.text=="Мой список":
-            get_items(message)
+            get_items(message, message.from_user.id)
     
         elif message.text=="Удалить продукт":
             bot.send_message(message.chat.id, "ID продукта, который вы хотите удалить?",
@@ -212,21 +210,22 @@ def bot_actions(bot):
             bot.register_next_step_handler(message, remove_item)
             
         elif message.text=="А что по акции?":
-            get_profits(message)
+            get_profits(message, message.from_user.id)
             
         else:
-            bot.send_message(message.chat.id, "Команда не распознана. Доступные опции перечислены в /start",
-                             reply_markup=kboard)
+            ...
             
-    @bot.callback_query_handler(func=lambda call: call.data.split('#')[0]=='items')
+    @bot.callback_query_handler(func=lambda call: call.data.split('#')[1]=='items')
     def items_page_callback(call):
-        page = int(call.data.split('#')[1])
-        get_items(call.message, True, page)
+        page = int(call.data.split('#')[2])
+        user_id = call.data.split('#')[0]
+        get_items(call.message, user_id, True, page)
         
-    @bot.callback_query_handler(func=lambda call: call.data.split('#')[0]=='profits')
+    @bot.callback_query_handler(func=lambda call: call.data.split('#')[1]=='profits')
     def profits_page_callback(call):
-        page = int(call.data.split('#')[1])
-        get_profits(call.message, True, page)
-    
+        page = int(call.data.split('#')[2])
+        user_id = call.data.split('#')[0]
+        get_profits(call.message, user_id, True, page)
+     
     
 bot_polling()

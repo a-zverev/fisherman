@@ -151,8 +151,8 @@ def get_list_of_profits_for_user(user, abs_profit_threshold=10):
 def add_demo_for_user(user):
     con = sqlite3.connect(DB_ADDRESS_OPERATIONS)
     cur = con.cursor()
-    for i in ('6', '22', '30', '51', '70', '84'):
-        cur.execute('''INSERT OR IGNORE INTO users (id, user) VALUES (:id, :user)''', {'id': i, 'user': user})
+    for i in range(1, 120, 5):
+        cur.execute('''INSERT OR IGNORE INTO users (id, user) VALUES (:id, :user)''', {'id': str(i), 'user': user})
     con.commit()
     con.close()
     return True
