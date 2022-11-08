@@ -1,6 +1,6 @@
 import logging
 import telebot
-import time
+from time import sleep
 from telebot import types
 from telegram_bot_pagination import InlineKeyboardPaginator
 
